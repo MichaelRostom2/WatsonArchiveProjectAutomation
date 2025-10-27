@@ -46,7 +46,7 @@ def extract_event_details(url: str):
   event_details["description"] = driver.find_element(By.CLASS_NAME,
                                                      "lw_calendar_event_description").text
   event_details["url"] = url
-  event_details["Link"] = driver.find_element(By.XPATH, "/html/body/div[1]/main/div/div[1]/section/div[2]/div[2]/div/div/div/div[1]/a").get_attribute("href")
+  # event_details["Link"] = driver.find_element(By.XPATH, "/html/body/div[1]/main/div/div[1]/section/div[2]/div[2]/div/div/div/div[1]/a").get_attribute("href")
 
   driver.quit()
   print("Event Details:")
@@ -56,8 +56,8 @@ def extract_event_details(url: str):
 
 
 # Example usage
-url = "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
-# url = input("Enter the URL of the event: ")
+# url = "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
+url = input("Enter the URL of the event: ")
 # url = "https://events.brown.edu/event/immigrationjournalism"
 
 print("Extracting event details...")
