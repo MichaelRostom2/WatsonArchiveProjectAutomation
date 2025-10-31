@@ -17,8 +17,11 @@ load_dotenv(override=True)
 api_key = getenv("GEMINI_API_KEY")
 gemini_client = genai.Client(api_key=api_key)
 
-def extract_event_details(url: str):
-  driver = open_url(url)
+
+def extract_event_details(url: str) -> dict:
+  print("Opening URL...")
+  open_url(url, driver)
+  print("Extracting event details...")
 
   # Collect event details
   event_details = {}
@@ -26,13 +29,15 @@ def extract_event_details(url: str):
   # Title is retrieved from the tab name
   event_details["title"] = driver.title.split('|')[0].strip()
 
-
   # Date is captured from the web page then converted to the required format
-  numeric_date_list: List[str] = driver.find_element(By.ID, "lw_cal_this_day").text.split(" ")
+  numeric_date_list: List[str] = driver.find_element(By.ID,
+                                                     "lw_cal_this_day").text.split(
+    " ")
   month_numeric: int = convert_month_to_number(numeric_date_list[0])
   day_numeric: str = numeric_date_list[1][:-1]
   year_numeric: str = numeric_date_list[2]
-  event_details["date"] = str(month_numeric) + "/" + day_numeric + "/" + year_numeric
+  event_details["date"] = str(
+    month_numeric) + "/" + day_numeric + "/" + year_numeric
 
   # Semester is calculated from the month
   # TODO: double check month cutoff for semesters
@@ -54,15 +59,15 @@ def extract_event_details(url: str):
 
   # Keywords are extracted by gemini from description
   event_details["keywords"] = call_gemini(gemini_client,
-                                          "Extract keywords from the event description" 
+                                          "Extract keywords from the event description"
                                           "Only return the keywords separated by commas",
-                                          event_details["description"]).text
+                                          event_details["description"])
 
   # Topics are extracted by gemini from the description
   event_details["topics"] = call_gemini(gemini_client,
-                                          "Extract key themes from the event description" 
-                                          "Only return the one to three word themes separated by commas",
-                                          event_details["description"]).text
+                                        "Extract key themes from the event description"
+                                        "Only return the one to three word themes separated by commas",
+                                        event_details["description"])
 
   # Region is extracted by gemini from the description
   event_details["region"] = call_gemini(gemini_client,
@@ -71,7 +76,10 @@ def extract_event_details(url: str):
                                         "Only pick from the following:"
                                         "Africa, Brazil, China, Europe, India & South Asia,"
                                         "Latin America & Caribbean, Middle East, Russia, United States",
-                                        event_details["description"]).text
+                                        event_details["description"])
+
+  # Country is extracted by gemini from the description
+  # TODO: figure out why this isn't in the spec sheet
 
   # Event series is chosen from standardized list
   # TODO: get the list and implement this
@@ -87,36 +95,70 @@ def extract_event_details(url: str):
                                                 "Security: Covers traditional and emerging global security concerns, including climate change, pandemics, cyber threats, and post-conflict reconstruction."
                                                 "Development: Focuses on inequality, governance, urban transformation, democracy, and global economic systems."
                                                 "Governance: Explores how globalization affects political and economic institutions and the need for new forms of global governance.",
-                                                event_details["description"]).text
+                                                event_details["description"])
 
   # The right column is retrieved from the web page
-  # This includes data for location, room, sponsor, and description
-  # right_col: List[str] = driver.find_element(By.ID,
-  #                                            "lw_cal_event_detail_cols_right").text
+  # This column includes data for location, room, sponsor
+  right_col: List[str] = driver.find_element(By.ID,
+                                             "lw_cal_event_detail_cols_right").text.split(
+    '\n')
 
+  for line in right_col:
+    # TODO: ask about the difference between building and location in the sheet
 
-  # for line in right_col.split('\n'):
-  #   if "Sponsor" in line:
-  #     event_details["sponsor"] = line.split(':')[1]
-  #   if "Location" in line:
-  #     event_details["location"] = line.split(':')[1]
-  #   if "Room" in line:
-  #     event_details["room"] = line.split(':')[1]
-  #
-  # event_details["url"] = url
-  # # event_details["Link"] = driver.find_element(By.XPATH, "/html/body/div[1]/main/div/div[1]/section/div[2]/div[2]/div/div/div/div[1]/a").get_attribute("href")
+    # TODO: see if we need any other data from the right column
+
+    if "Location" in line:
+      event_details["location"] = line.split(':')[1]
+    if "Room" in line:
+      event_details["room"] = line.split(':')[1]
+
+  # Student Run
+  # TODO: ask how we determine this
+
+  # Privacy
+  # TODO: ask how we determine this
+
+  # Link is inputted directly
+  event_details["link"] = url
+
+  # Watson Faculty
+  # TODO: ask how we determine this
+
+  # Center
+  # TODO: ask how we determine this
+
+  # Youtube Link is extracted by gemini from the description
+  # TODO: handle case when there is no youtube link
+  # Right now it can't find it if the order of html elements changes
+  # and fails if not found
+  # event_details["yt_link"] = driver.find_element(By.XPATH, "/html/body/div[1]/main/div/div[1]/section/div[2]/div[2]/div/div/div/div[1]/a").get_attribute("href")
+
+  # Talent is extracted by gemini from the description
+  talent_list: List[str] = call_gemini(gemini_client,
+                                       "Extract the talent of the event"
+                                       "Only names of people attending or speaking at the event"
+                                       "returned separated by commas",
+                                       event_details["description"]).split(",")
+
+  for i in range(len(talent_list)):
+    if i > 3:
+      # Can only enter 4 talents in the spreadsheet
+      print("Too many talents, only entering the first 4")
+      break
+    event_details["talent" + str(i + 1)] = talent_list[i]
 
   driver.quit()
-  print("Event Details:")
-  for key, value in event_details.items():
+  return event_details
+
+
+if __name__ == "__main__":
+  driver = open_driver()
+  events_details = extract_event_details(
+    input("Enter the URL of the event from events@brown: "))
+  # Example urls for testing
+  # "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
+  # "https://events.brown.edu/event/immigrationjournalism"
+
+  for key, value in events_details.items():
     print(f"{key.capitalize()}: {value}")
-
-
-
-# Example usage
-url = "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
-# url = input("Enter the URL of the event: ")
-# url = "https://events.brown.edu/event/immigrationjournalism"
-
-print("Extracting event details...")
-extract_event_details(url)

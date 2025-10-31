@@ -18,27 +18,31 @@ def convert_month_to_number(month: str) -> int:
     "July": 7,
     "August": 8,
     "September": 9,
+    "October": 10,
+    "November": 11,
+    "December": 12
   }
   return month_dict[month]
 
-def open_url(url: str):
+def open_driver() -> webdriver.Firefox:
   options = Options()
   options.add_argument("--headless")
 
   # Change depending on the path to geckodriver
   service = Service(executable_path='/usr/local/bin/geckodriver')
   driver = webdriver.Firefox(service=service, options=options)
+  return driver
 
+def open_url(url: str, driver: webdriver.Firefox = open_driver()) -> None:
   driver.get(url)
   WebDriverWait(driver, 10)
   driver.implicitly_wait(2)
-  return driver
 
-def call_gemini(client: Client, prompt: str, context: str):
+def call_gemini(client: Client, prompt: str, context: str) -> str:
   response = client.models.generate_content(
       model="gemini-2.5-flash-lite",
       contents= "Execute the following command: " + prompt +
       "\n" +
       "Given the following context:" + context)
 
-  return response
+  return response.text
