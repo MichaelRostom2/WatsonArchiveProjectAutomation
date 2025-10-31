@@ -1,0 +1,44 @@
+from google.genai import Client
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from google import genai
+from os import getenv
+from dotenv import load_dotenv
+
+def convert_month_to_number(month: str) -> int:
+  month_dict = {
+    "January": 1,
+    "February": 2,
+    "March": 3,
+    "April": 4,
+    "May": 5,
+    "June": 6,
+    "July": 7,
+    "August": 8,
+    "September": 9,
+  }
+  return month_dict[month]
+
+def open_url(url: str):
+  options = Options()
+  options.add_argument("--headless")
+
+  # Change depending on the path to geckodriver
+  service = Service(executable_path='/usr/local/bin/geckodriver')
+  driver = webdriver.Firefox(service=service, options=options)
+
+  driver.get(url)
+  WebDriverWait(driver, 10)
+  driver.implicitly_wait(2)
+  return driver
+
+def call_gemini(client: Client, prompt: str, context: str):
+  response = client.models.generate_content(
+      model="gemini-2.5-flash-lite",
+      contents= "Execute the following command: " + prompt +
+      "\n" +
+      "Given the following context:" + context)
+
+  return response
