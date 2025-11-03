@@ -1,7 +1,9 @@
 from typing import List
 
 from selenium.webdriver.common.by import By
-
+from os import getenv
+from dotenv import load_dotenv
+from google import genai
 from utils import *
 
 # TODO:
@@ -10,6 +12,7 @@ from utils import *
 # - Url is from events @ brown
 # - Handle Selenium errors with not finding elements
 # - Handle Gemini errors
+# - Handle if given month other than dictonary
 # 2. Figure out how to input this data back to Google Sheets
 
 # Setup Gemini
@@ -21,9 +24,9 @@ gemini_client = genai.Client(api_key=api_key)
 def extract_event_details(url: str) -> dict:
   print("Opening URL...")
   open_url(url, driver)
-  print("Extracting event details...")
 
   # Collect event details
+  print("Extracting event details...")
   event_details = {}
 
   # Title is retrieved from the tab name
@@ -40,12 +43,11 @@ def extract_event_details(url: str) -> dict:
     month_numeric) + "/" + day_numeric + "/" + year_numeric
 
   # Semester is calculated from the month
-  # TODO: double check month cutoff for semesters
-  if 8 <= month_numeric <= 12:
+  if 8 <= month_numeric <= 12 or month_numeric == 1:
     event_details["semester"] = "Fall"
-  elif 1 <= month_numeric <= 5:
+  elif 2 <= month_numeric <= 5:
     event_details["semester"] = "Spring"
-  elif 6 <= month_numeric <= 7:
+  elif 6 <= month_numeric <= 8:
     event_details["semester"] = "Summer"
   else:
     raise ValueError("Invalid month")
@@ -79,7 +81,10 @@ def extract_event_details(url: str) -> dict:
                                         event_details["description"])
 
   # Country is extracted by gemini from the description
-  # TODO: figure out why this isn't in the spec sheet
+  event_details["country"] = call_gemini(gemini_client,
+                                        "Extract the country of the event"
+                                        "Only return the country name",
+                                        event_details["description"])
 
   # Event series is chosen from standardized list
   # TODO: get the list and implement this
@@ -104,32 +109,32 @@ def extract_event_details(url: str) -> dict:
     '\n')
 
   for line in right_col:
-    # TODO: ask about the difference between building and location in the sheet
-
-    # TODO: see if we need any other data from the right column
-
     if "Location" in line:
-      event_details["location"] = line.split(':')[1]
-    if "Room" in line:
-      event_details["room"] = line.split(':')[1]
+      event_details["Building"] = line.split(':')[1]
+    elif "Room" in line:
+      event_details["Location"] = line.split(':')[1]
+    elif "Sponsor" in line:
+      # Sponsor is the same as center
+      event_details["Sponsor"] = line.split(':')[1]
+
 
   # Student Run
-  # TODO: ask how we determine this
+  # NOTE: 90% of the time is no, but leave it empty for now
+  event_details["student_run"] = ""
 
   # Privacy
-  # TODO: ask how we determine this
+  # TODO: This is dependent on whether the Youtube link is available
+
 
   # Link is inputted directly
   event_details["link"] = url
 
   # Watson Faculty
-  # TODO: ask how we determine this
-
-  # Center
-  # TODO: ask how we determine this
+  # TODO: This is the description of the yt video
 
   # Youtube Link is extracted by gemini from the description
   # TODO: handle case when there is no youtube link
+  # TODO: handle the privacy attribute from the result of the yt link
   # Right now it can't find it if the order of html elements changes
   # and fails if not found
   # event_details["yt_link"] = driver.find_element(By.XPATH, "/html/body/div[1]/main/div/div[1]/section/div[2]/div[2]/div/div/div/div[1]/a").get_attribute("href")
@@ -138,7 +143,7 @@ def extract_event_details(url: str) -> dict:
   talent_list: List[str] = call_gemini(gemini_client,
                                        "Extract the talent of the event"
                                        "Only names of people attending or speaking at the event"
-                                       "returned separated by commas",
+                                       "return separated by commas",
                                        event_details["description"]).split(",")
 
   for i in range(len(talent_list)):
@@ -159,6 +164,7 @@ if __name__ == "__main__":
   # Example urls for testing
   # "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
   # "https://events.brown.edu/event/immigrationjournalism"
+  # "https://events.brown.edu/event/321735-understanding-the-government-shutdown-causes-and"
 
   for key, value in events_details.items():
     print(f"{key.capitalize()}: {value}")

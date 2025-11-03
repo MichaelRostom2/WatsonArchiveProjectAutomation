@@ -3,9 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
-from google import genai
-from os import getenv
-from dotenv import load_dotenv
+from os import path, makedirs, environ
 
 def convert_month_to_number(month: str) -> int:
   month_dict = {
@@ -28,6 +26,8 @@ def open_driver() -> webdriver.Firefox:
   options = Options()
   options.add_argument("--headless")
 
+  makedirs(path.expanduser("~/tmp"), exist_ok=True)
+  environ['TMPDIR'] = path.expanduser("~/tmp")
   # Change depending on the path to geckodriver
   service = Service(executable_path='/usr/local/bin/geckodriver')
   driver = webdriver.Firefox(service=service, options=options)
