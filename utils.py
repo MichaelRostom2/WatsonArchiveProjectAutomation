@@ -20,6 +20,7 @@ def convert_month_to_number(month: str) -> int:
     "November": 11,
     "December": 12
   }
+  # TODO: this will fail if the month is not exactly as above
   return month_dict[month]
 
 def open_driver() -> webdriver.Firefox:

@@ -165,6 +165,7 @@ if __name__ == "__main__":
   # "https://events.brown.edu/event/303266-syria-after-assad-a-teach-in"
   # "https://events.brown.edu/event/immigrationjournalism"
   # "https://events.brown.edu/event/321735-understanding-the-government-shutdown-causes-and"
+  # "https://events.brown.edu/event/313473-thea-riofrancos-extraction-the-frontiers-of-green-cap"
 
   for key, value in events_details.items():
     print(f"{key.capitalize()}: {value}")
