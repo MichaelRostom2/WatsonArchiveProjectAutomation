@@ -3,6 +3,7 @@
 WORK IN PROGRESS 
 
 
+
 To run this script, you will need to:
 1. Install the geckodriver
 2. Install the python dependencies: selenium, dotenv, google-genai
